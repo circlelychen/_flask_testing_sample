@@ -64,4 +64,10 @@ class FileUploadTestCase(FlaskTestCase):
             'file': (StringIO('my file contents'), 'hello world.txt')
             })
         self._logger.info(resp)
+        jresp = json.loads(resp.data)
+        jresp.get("code", "").must.be.equal(200)
+        jresp.get("status", "").must.be.equal("SUCCESS")
+        jresp.get("result").must.be.a(list)
+        results = jresp.get("result")
+        len(results).must.be.equal(len(self._file_infos) + 1 )
 
