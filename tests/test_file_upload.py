@@ -36,10 +36,18 @@ class FileUploadTestCase(FlaskTestCase):
 
     def test_upload_with_invalid_too_large_file(self):
         resp = self.post("/file", data={
-            'file': (StringIO("content "*16*1024*1024), "{0}.{1}".format(self._filename, "txt"))
+            'file': (StringIO("content "*8*1024*1024), "{0}.{1}".format(self._filename, "txt"))
             })
         self.assertStatusCode(resp, 413)
 
+
+    def test_upload_file_with_duplicated_filename(self):
+        resp = self.post("/file", data={
+            'file': (StringIO('my file contents'), self._file_infos[0].file_name)
+            })
+        self.assertStatusCode(resp, 403)
+
+    @unittest.skip("test_upload_with_invalid_filename_extention")
     def test_upload_with_invalid_filename_extention(self):
         for extension in ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif']:
             resp = self.post("/file", data={
@@ -52,12 +60,6 @@ class FileUploadTestCase(FlaskTestCase):
             })
         self.assertBadRequest(resp)
 
-    def test_upload_file_with_duplicated_filename(self):
-        resp = self.post("/file", data={
-            'file': (StringIO('my file contents'), self._file_infos[0].file_name)
-            })
-        self.assertStatusCode(resp, 403)
-
     @unittest.skip("test_upload_file")
     def test_upload_file(self):
         resp = self.post("/file", data={
@@ -67,7 +69,7 @@ class FileUploadTestCase(FlaskTestCase):
         jresp = json.loads(resp.data)
         jresp.get("code", "").must.be.equal(200)
         jresp.get("status", "").must.be.equal("SUCCESS")
-        jresp.get("result").must.be.a(list)
-        results = jresp.get("result")
-        len(results).must.be.equal(len(self._file_infos) + 1 )
+        jresp.get("result").must.be.a(dict)
+        result = jresp.get("result")
+        result.get("filename").must.be.a(unicode)
 

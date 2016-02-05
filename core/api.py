@@ -31,4 +31,12 @@ def upload_file():
     count = db.session.query(FileInfo).filter(FileInfo.file_name == filename).count()
     if count > 0:
         abort(403)
+    from .connector import s3_api
+    content = file.read()
+    current_app.logger.info(content)
+    file_storage = s3_api(filename,content)
+    try:
+        file_storage.save()
+    except Exception as e:
+        current_app.logger.info(e)
     return jsonify(code=200, status="SUCCESS", result={"filename": filename})
