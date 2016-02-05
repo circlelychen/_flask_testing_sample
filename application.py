@@ -35,7 +35,7 @@ def init_app(app):
             # This is testing
             app.register_blueprint(bp_instance, url_prefix=url_prefix)
     # bind restful api
-    from api import restful
+    from core.api import restful
     register_blueprint(app, restful, web_server_prefix="", url_prefix='')
     return app
 
