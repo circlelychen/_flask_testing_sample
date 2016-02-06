@@ -14,11 +14,6 @@ if os.getcwd() not in sys.path:
     sys.path.append(os.getcwd())
 
 from unittest import TestCase
-from flask import Request
-from werkzeug.datastructures import MultiDict
-
-
-from .helper import TestingFileStorage
 
 import application 
 
@@ -89,25 +84,6 @@ class FlaskTestCase(TestCase):
 
     def _jrequest(self, *args, **kwargs):
         return self._request(*args, **kwargs)
-
-    def post_with_file(self, *args, **kwargs):
-        class TestingRequest(Request):
-            """A testing request to use that will return a
-            TestingFileStorage to test the uploading."""
-            @property
-            def files(self):
-                d = MultiDict()
-                d['file'] = TestingFileStorage(
-                    stream=kwargs['data']['file'][0],
-                    filename=kwargs['data']['file'][1])
-                return d
-#            def _get_file_stream(*args, **kwargs):
-#                return TestingFile()
-
-        self.new_app = self._create_app()
-        self.new_app.request_class = TestingRequest
-        test_client = self.new_app.test_client(use_cookies=True)
-        return self._request(test_client.post, *args, **kwargs)
 
     def get(self, *args, **kwargs):
         return self._request(self.client.get, *args, **kwargs)
