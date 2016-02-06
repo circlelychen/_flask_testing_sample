@@ -1,9 +1,10 @@
-import unittest
 import json
 import sure
-
 from StringIO import StringIO
+
 from . import FlaskTestCase
+import boto
+from moto import mock_s3
 
 class FileUploadTestCase(FlaskTestCase): 
 
@@ -11,6 +12,7 @@ class FileUploadTestCase(FlaskTestCase):
         super(FileUploadTestCase, self).setUp()
 
         self._filename = "example"
+        self._content = "content" * 1024
 
     def _create_fixtures(self):
         super(FileUploadTestCase, self)._create_fixtures()
@@ -43,33 +45,32 @@ class FileUploadTestCase(FlaskTestCase):
 
     def test_upload_file_with_duplicated_filename(self):
         resp = self.post("/file", data={
-            'file': (StringIO('my file contents'), self._file_infos[0].file_name)
+            'file': (StringIO(self._content), self._file_infos[0].file_name)
             })
         self.assertStatusCode(resp, 403)
 
-    @unittest.skip("test_upload_with_invalid_filename_extention")
     def test_upload_with_invalid_filename_extention(self):
-        for extension in ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif']:
-            resp = self.post("/file", data={
-                'file': (StringIO("content "), "{0}.{1}".format(self._filename, extension))
-                })
-            self.assertOk(resp)
-
         resp = self.post("/file", data={
-            'file': (StringIO("content "), "{0}.{1}".format(self._filename, "asdfadsfasd"))
+            'file': (StringIO(self._content), "{0}.{1}".format(self._filename, "asdfadsfasd"))
             })
         self.assertBadRequest(resp)
 
-    @unittest.skip("test_upload_file")
+    @mock_s3
     def test_upload_file(self):
+        conn = boto.connect_s3(self.app.config.get("AWS_ACCESS_KEY_ID"),
+                               self.app.config.get("AWS_SECRET_ACCESS_KEY"))
+        conn.create_bucket(self.app.config.get('S3_BUCKET_NAME'))
+
         resp = self.post("/file", data={
-            'file': (StringIO('my file contents'), 'hello world.txt')
+            'file': (StringIO(self._content), 'helloworld.txt')
             })
-        self._logger.info(resp)
         jresp = json.loads(resp.data)
         jresp.get("code", "").must.be.equal(200)
         jresp.get("status", "").must.be.equal("SUCCESS")
         jresp.get("result").must.be.a(dict)
         result = jresp.get("result")
         result.get("filename").must.be.a(unicode)
+
+        assert conn.get_bucket(self.app.config.get('S3_BUCKET_NAME')).get_key("helloworld.txt").get_contents_as_string() == self._content
+
 
